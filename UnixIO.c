@@ -46,45 +46,30 @@ int main()
 	srand(NULL);
 	int messageNum = 1;
 
-	for (int i = 0; i < 5; i++)
-	{
-		pid_t pid;  // child process id
-		int fd[2];  // file descriptors for the pipe
-		int sleepDuration = rand() % 3;
 
-		//alarm(2);
-		//signal(SIGALRM,(void (*)(int)) killProcess);
 
-		// Create the pipe.
-		if (pipe(fd) == -1) {
-			fprintf(stderr,"pipe() failed");
-			return 1;
-		}
+	pid_t pids[5];
+	int fds[5][2];
+	int i;
+	int n = 5;
 
-		// Fork a child process.
-		pid = fork();
+	/* Start children. */
+	for (i = 0; i < n; ++i) {
+		if ((pids[i] = fork()) < 0) {
+			perror("fork");
+			abort();
+		} else if (pids[i] == 0) {
+			//if (pipe(fds[i][0] == -1)) {
+			//	fprintf(stderr,"pipe() failed");
+			//	return 1;
+			//}
+			pipe(fds[i]);
+			//Work for child process
 
-		if (pid > 0) {
-			// PARENT PROCESS.
 
-			// Close the unused READ end of the pipe.
-			close(fd[READ_END]);
-
-			// Write to the WRITE end of the pipe.
-			write(fd[WRITE_END], write_msg, strlen(write_msg)+1);
-			printf("Parent: Wrote '%s' to the pipe.\n", write_msg);
-
-			// Close the WRITE end of the pipe.
-			close(fd[WRITE_END]);
-		}
-		else if (pid == 0) {
-			// CHILD PROCESS.
-
-			//signal(SIGALRM,(void (*)(int)) killProcess);
-
-			//for(;;) {
-			while(time(NULL) - startTime < 2) {
-
+			//for(int x = 0; x < 5; x++) {
+			while(time(NULL) - startTime < 5) {
+				int sleepDuration = rand() % 3;
 				//alarm(2);
 
 				//time_t currentTime = time(NULL);
@@ -94,7 +79,7 @@ int main()
 				gettimeofday(&tv2, NULL);
 
 				unsigned long microsec = (1000000 * tv2.tv_sec + tv2.tv_usec)
-										- (1000000 * tv1.tv_sec + tv1.tv_usec);
+																		- (1000000 * tv1.tv_sec + tv1.tv_usec);
 
 				time_t milsec = microsec/1000;
 				time_t sec = milsec/1000;
@@ -107,37 +92,55 @@ int main()
 						remainingsec, remainingmsec, i, messageNum);
 				//min + ":" + remainingsec + "." + remainingmsec + "\n";
 
-				write(fd[WRITE_END], timestamp, strlen(timestamp)+1);
+				write(fds[i][WRITE_END], timestamp, strlen(timestamp)+1);
 				//printf("%d:%.2d.%.3d\n", min, remainingsec, remainingmsec);
 				puts(timestamp);
 
 				// Close the unused WRITE end of the pipe.
-				close(fd[WRITE_END]);
+				close(fds[i][WRITE_END]);
 
 				// Read from the READ end of the pipe.
-				read(fd[READ_END], read_msg, BUFFER_SIZE);
-				printf("Child %d: Read '%s' from the pipe.\n", i, read_msg);
-
-				//char tmbuf[64], buf[64];
-				///time_t nowtime = tv.tv_sec;
-				//struct tm *nowtm = localtime(&nowtime);
-				//strftme(tmbuf, sizeof tmbuf, "%M:%S", nowtm);
-
-				//printf("%d\n", localtime(tv.tv_sec));
-
+				//read(fd[READ_END], read_msg, BUFFER_SIZE);
+				//printf("Child %d: Read '%s' from the pipe.\n", i, read_msg);
 				// Close the READ end of the pipe.
-				close(fd[READ_END]);
+				close(fds[i][READ_END]);
 
+				printf("Child %d sleeps for %d sec\n\n", i, sleepDuration);
 				sleep(sleepDuration);
 				messageNum++;
 			}
+			//}
 		}
-		else {
-			fprintf(stderr, "fork() failed");
-			return 1;
-		}
+
+
+
+
+
+
+
+		exit(0);
 	}
-	//}
+
+	//puts("done");
+
+	/* Wait for children to exit. */
+	int status;
+	pid_t pid = 1;
+
+
+
+
+
+	while (n > 0) {
+		pid = wait(&status);
+		//printf("Child with PID %ld exited with status 0x%x.\n", (long)pid, status);
+
+		printf("done\n");
+
+		--n;  // TODO(pts): Remove pid from the pids array.
+	}
+
 	return 0;
 }
+
 
