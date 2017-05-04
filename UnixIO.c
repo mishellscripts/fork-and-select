@@ -55,17 +55,23 @@ int main()
 
 	/* Start children. */
 	for (i = 0; i < n; ++i) {
+		if(pipe(fds[i]) == -1){
+			perror("pipe");
+			exit(EXIT_FAILURE);
+		}
 		if ((pids[i] = fork()) < 0) {
 			perror("fork");
 			abort();
-		} else if (pids[i] == 0) {
+		}
+		else if (pids[i] == 0) {
 			//if (pipe(fds[i][0] == -1)) {
 			//	fprintf(stderr,"pipe() failed");
 			//	return 1;
 			//}
-			pipe(fds[i]);
-			//Work for child process
+			//pipe(fds[i]);
 
+			//Work for child process
+			printf("%d\n", i);
 
 			//for(int x = 0; x < 5; x++) {
 			while(time(NULL) - startTime < 5) {
@@ -108,18 +114,17 @@ int main()
 				printf("Child %d sleeps for %d sec\n\n", i, sleepDuration);
 				sleep(sleepDuration);
 				messageNum++;
+				break;
 			}
-			//}
 		}
+		else{
+			continue;
+		}	//}
 
-
-
-
-
-
-
-		exit(0);
 	}
+
+		//exit(0);
+	//}
 
 	//puts("done");
 
