@@ -86,12 +86,10 @@ int main()
 			}
 		}
 		//exit(0);
-		// FD_ZERO(&fds);    	// initialize inputs
-		//FD_SET(0, &inputs);  	// set file descriptor 0 (stdin)
 	}
 
 	struct timeval timeout;
-	int rc, result;
+	int rc;
 
 	// 2.5 seconds time limit.
 	timeout.tv_sec = 2;
@@ -104,7 +102,7 @@ int main()
 		FD_SET(fds[i][READ_END], &read_set);
 	}
 
-	rc = select(FD_SETSIZE, &read_set,
+	rc = select(sizeof(read_set)*8, &read_set,
 			NULL, NULL, &timeout);
 
 	if (rc > 0) {
