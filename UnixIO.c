@@ -44,6 +44,8 @@ int main()
 	int fds[5][2];
 	int i;
 	int n = 5;
+	fd_set read_set;
+	FD_ZERO(&read_set);
 
 	/* Start children. */
 	for (i = 0; i < n; ++i) {
@@ -65,7 +67,7 @@ int main()
 				gettimeofday(&tv2, NULL);
 
 				unsigned long microsec = (1000000 * tv2.tv_sec + tv2.tv_usec)
-																										- (1000000 * tv1.tv_sec + tv1.tv_usec);
+													- (1000000 * tv1.tv_sec + tv1.tv_usec);
 
 				time_t milsec = microsec/1000;
 				time_t sec = milsec/1000;
@@ -80,9 +82,12 @@ int main()
 				write(fds[i][WRITE_END], timestamp, strlen(timestamp)+1);
 				printf("Child %d writes %s\n", i, timestamp);
 
+				close(fds[i][WRITE_END]);
+
 				printf("Child %d sleeps for %d sec\n\n", i, sleepDuration);
 				sleep(sleepDuration);
 				messageNum++;
+				FD_SET(fds[i][READ_END], &read_set);
 			}
 		}
 		//exit(0);
@@ -92,15 +97,13 @@ int main()
 	int rc;
 
 	// 2.5 seconds time limit.
-	timeout.tv_sec = 2;
+	timeout.tv_sec = 1;
 	timeout.tv_usec = 500000;
 
-	fd_set read_set;
 
-	FD_ZERO(&read_set);
-	for (i = 0; i < n; ++i) {
-		FD_SET(fds[i][READ_END], &read_set);
-	}
+	//for (i = 0; i < n; ++i) {
+
+	//}
 
 	rc = select(sizeof(read_set)*8, &read_set,
 			NULL, NULL, &timeout);
@@ -110,11 +113,12 @@ int main()
 		//			    	read(fds[i][READ_END], read_msg, BUFFER_SIZE);
 		read(&read_set, read_msg, BUFFER_SIZE);
 		printf("Parent: Read '%s' from the pipe.\n", read_msg);
-		close(READ_END);
+		//close(fds[i][READ_END]);
 	}
 	else {
 		puts("None read");
 	}
+
 
 	return 0;
 
