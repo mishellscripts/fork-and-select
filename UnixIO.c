@@ -40,14 +40,10 @@ int main()
 	srand(NULL);
 	int messageNum = 1;
 
-
-
 	pid_t pids[5];
 	int fds[5][2];
 	int i;
 	int n = 5;
-
-
 
 	/* Start children. */
 	for (i = 0; i < n; ++i) {
@@ -63,14 +59,13 @@ int main()
 			pipe(fds[i]);
 
 			//Work for child process
-
 			while(time(NULL) - startTime < 5) {
 				int sleepDuration = rand() % 3;
 
 				gettimeofday(&tv2, NULL);
 
 				unsigned long microsec = (1000000 * tv2.tv_sec + tv2.tv_usec)
-																		- (1000000 * tv1.tv_sec + tv1.tv_usec);
+																										- (1000000 * tv1.tv_sec + tv1.tv_usec);
 
 				time_t milsec = microsec/1000;
 				time_t sec = milsec/1000;
@@ -83,22 +78,47 @@ int main()
 						remainingsec, remainingmsec, i, messageNum);
 
 				write(fds[i][WRITE_END], timestamp, strlen(timestamp)+1);
-				printf("Child writes %s\n", timestamp);
+				printf("Child %d writes %s\n", i, timestamp);
 
 				printf("Child %d sleeps for %d sec\n\n", i, sleepDuration);
 				sleep(sleepDuration);
 				messageNum++;
-
-
-				//close(fds[i][WRITE_END]);
-				read(fds[i][READ_END], read_msg, BUFFER_SIZE);
-				printf("Parent: Read '%s' from the pipe.\n", read_msg);
 			}
-			close(fds[i][READ_END]);
 		}
 		//exit(0);
+		// FD_ZERO(&fds);    	// initialize inputs
+		//FD_SET(0, &inputs);  	// set file descriptor 0 (stdin)
 	}
-	return 0;
-}
 
+	struct timeval timeout;
+	int rc, result;
+
+	// 2.5 seconds time limit.
+	timeout.tv_sec = 2;
+	timeout.tv_usec = 500000;
+
+	fd_set read_set;
+
+	FD_ZERO(&read_set);
+	for (i = 0; i < n; ++i) {
+		FD_SET(fds[i][READ_END], &read_set);
+	}
+
+	rc = select(FD_SETSIZE, &read_set,
+			NULL, NULL, &timeout);
+
+	if (rc > 0) {
+		//close(fds[i][WRITE_END]);
+		//			    	read(fds[i][READ_END], read_msg, BUFFER_SIZE);
+		read(&read_set, read_msg, BUFFER_SIZE);
+		printf("Parent: Read '%s' from the pipe.\n", read_msg);
+		close(READ_END);
+	}
+	else {
+		puts("None read");
+	}
+
+	return 0;
+
+}
 
