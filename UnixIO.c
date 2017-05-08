@@ -44,6 +44,7 @@ int main() {
 	int i;
 	int n = 5;
 
+
 	/* Start children. */
 	for (i = 0; i < n; ++i) {
 		printf("%d\n", i);
@@ -64,7 +65,8 @@ int main() {
 
 			//Work for child process
 
-			while (time(NULL) - startTime < 5) {
+			while(time(NULL) - startTime < 5) {
+
 				int sleepDuration = rand() % 3;
 
 				gettimeofday(&tv2, NULL);
@@ -82,83 +84,53 @@ int main() {
 				sprintf(timestamp, "%d:%.2d.%.3d: Child %d message %d", min,
 						remainingsec, remainingmsec, i, messageNum);
 
-				write(fds[i][WRITE_END], timestamp, strlen(timestamp) + 1);
-				//printf("Child writes %s\n", timestamp);
+				write(fds[i][WRITE_END], timestamp, strlen(timestamp)+1);
+				printf("Child %d writes %s\n", i, timestamp);
+
+				close(fds[i][WRITE_END]);
+
 
 				//printf("Child %d sleeps for %d sec\n\n", i, sleepDuration);
 				sleep(sleepDuration);
 				messageNum++;
 
-				//close(fds[i][WRITE_END]);
-				//read(fds[i][READ_END], read_msg, BUFFER_SIZE);
-				//printf("Parent: Read '%s' from the pipe.\n", read_msg);
+				FD_SET(fds[i][READ_END], &read_set);
 			}
-			close(fds[i][READ_END]);
-			break;
+
 		}
 		//exit(0);
 	}
 
-	if (pids[0] > 0) {
-		char buffer[128];
-		int result, nread;
 
-		fd_set inputs, inputfds; // sets of file descriptors
-		struct timeval timeout;
+	struct timeval timeout;
+	int rc;
 
-		FD_ZERO(&inputs);    	// initialize inputs to the empty set
-		FD_SET(0, &inputs);  	// set file descriptor 0 (stdin)
+	// 2.5 seconds time limit.
+	timeout.tv_sec = 1;
+	timeout.tv_usec = 500000;
 
-		//  Wait for input on stdin for a maximum of 2.5 seconds.
-		for (;;) {
-			inputfds = inputs;
 
-			// 2.5 seconds.
-			timeout.tv_sec = 2;
-			timeout.tv_usec = 500000;
+	//for (i = 0; i < n; ++i) {
 
-			// Get select() results.
-			result = select(FD_SETSIZE, &inputfds, (fd_set *) 0, (fd_set *) 0,
-					&timeout);
+	//}
 
-			// Check the results.
-			//   No input:  the program loops again.
-			//   Got input: print what was typed, then terminate.
-			//   Error:     terminate.
-			switch (result) {
-			case 0: {				// timeout w/o input
-				printf("@");
-				fflush(stdout);
-				break;
-			}
+	rc = select(sizeof(read_set)*8, &read_set,
+			NULL, NULL, &timeout);
 
-			case -1: {				// error
-				perror("select");
-				exit(1);
-			}
-
-			// If, during the wait, we have some action on the file descriptor,
-			// we read the input on stdin and echo it whenever an
-			// <end of line> character is received, until that input is Ctrl-D.
-			default: {				// Got input
-				if (FD_ISSET(0, &inputfds)) {
-					ioctl(0, FIONREAD, &nread);
-
-					if (nread == 0) {
-						printf("Keyboard input done.\n");
-						exit(0);
-					}
-
-					nread = read(0, buffer, nread);
-					buffer[nread] = 0;
-					printf("Read %d characters from the keyboard: %s", nread,
-							buffer);
-				}
-				break;
-			}
-			}
-		}
+	if (rc > 0) {
+		//close(fds[i][WRITE_END]);
+		//			    	read(fds[i][READ_END], read_msg, BUFFER_SIZE);
+		read(&read_set, read_msg, BUFFER_SIZE);
+		printf("Parent: Read '%s' from the pipe.\n", read_msg);
+		//close(fds[i][READ_END]);
 	}
-	return 0;
-}
+	else {
+		puts("None read");
+	}
 
+
+
+	return 0;
+
+
+}
