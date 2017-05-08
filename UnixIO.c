@@ -43,6 +43,8 @@ int main() {
 	int fds[5][2];
 	int i;
 	int n = 5;
+	fd_set read_set;
+	FD_ZERO(&read_set);
 
 
 	/* Start children. */
@@ -99,6 +101,7 @@ int main() {
 
 		}
 		//exit(0);
+		break;
 	}
 
 
