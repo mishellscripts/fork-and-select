@@ -61,6 +61,13 @@ int main()
 	/* Start children. */
 	for (i = 0; i < n; ++i) {
 
+
+		sleepDuration = rand() % 3;
+		if (pipe(fds[i]) == -1) {
+			perror("pipe");
+			exit(EXIT_FAILURE);
+		}
+
 		char message[128];
 		if (i == 4) {
 			while(time(NULL) - startTime < 10) {
@@ -90,18 +97,18 @@ int main()
 				fprintf(fPtr, "Child %d writes %s\n", i+1, timestamp);
 
 
+				// Select
 				rc = select(FD_SETSIZE, &read_set, NULL, NULL, &timeout);
 				if (rc > 0) {
-					read(fds[4][READ_END], read_msg, BUFFER_SIZE);
+					puts("sad read");
+					read(fds[i][READ_END], read_msg, BUFFER_SIZE);
 					fprintf(fPtr, "Parent: Read '%s' from the pipe.\n", read_msg);
 				}
 			}
 		}
-		sleepDuration = rand() % 3;
-		if (pipe(fds[i]) == -1) {
-			perror("pipe");
-			exit(EXIT_FAILURE);
-		}
+
+
+
 		if ((pids[i] = fork()) < 0) {
 			perror("fork");
 			abort();
