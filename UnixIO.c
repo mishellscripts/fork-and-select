@@ -31,6 +31,9 @@ int main()
 	// Child 5: Prompts in terminal, write string to parent thru pipe
 	// Parent uses select() to choose which message to write to output.txt
 
+	FILE *fPtr;
+	fPtr = fopen("output.txt", "w");
+
 	gettimeofday(&tv1, NULL);
 	time_t startTime = time(NULL);
 
@@ -57,6 +60,18 @@ int main()
 
 	/* Start children. */
 	for (i = 0; i < n; ++i) {
+
+
+		char message[300];
+		if (i == 4) {
+			while(time(NULL) - startTime < 5) {
+				printf("Enter message: \n");
+				scanf("%s", &message);
+				puts("");
+			}
+		}
+
+
 		sleepDuration = rand() % 3;
 		if (pipe(fds[i]) == -1) {
 			perror("pipe");
@@ -69,8 +84,9 @@ int main()
 		else if (pids[i] == 0) {
 			//Work for child process
 			while(time(NULL) - startTime < 5) {
-				FD_ZERO(&read_set);
 
+				FD_ZERO(&read_set);
+				FD_SET(fds[i][READ_END], &read_set);
 				sleepDuration = rand() % 3;
 				gettimeofday(&tv2, NULL);
 
@@ -82,19 +98,61 @@ int main()
 				time_t remainingsec = sec % 60;
 				time_t remainingmsec = milsec % 1000;
 
-				char *timestamp = malloc(100);
-				sprintf(timestamp, "%d:%.2d.%.3d: Child %d message %d", min,
-						remainingsec, remainingmsec, i, messageNum);
+				char *timestamp = malloc(500);
+
+
+
+				if(i == 4) {
+
+					/*char message[300];
+					int nread;
+					if(FD_ISSET(fds[i][READ_END], &read_set)) {
+						//puts("duitty");
+						//printf(">>>>>");
+
+						//scanf("%c\n", &message);
+						ioctl(fds[i][READ_END], FIONREAD, &nread);
+						puts("");
+						if (nread == 0) {
+							//puts("sad");
+							//exit(0);
+						}
+						else {
+						nread = read(fds[i][READ_END], message, nread);
+						message[nread] = 0;
+						printf("Read %d characters from the keyboard: %s\n", nread, message);
+						}
+					}
+					printf("Enter message: \n");
+
+					scanf("%s", &message);
+					puts("");*/
+					//fprintf(stdout, "[child] Enter message: ");
+					//fgets(message, 80, stdin);
+					//printf("[child] line = %s\n", message);
+					sprintf(timestamp, "5th >>>> %d:%.2d.%.3d: Child %d message %s", min,
+							remainingsec, remainingmsec, i+1, message);
+				}
+				else { //for remaining 4 children
+					sprintf(timestamp, "%d:%.2d.%.3d: Child %d message %d", min,
+							remainingsec, remainingmsec, i+1, messageNum);
+					messageNum++;
+				}
+
+
 
 				write(fds[i][WRITE_END], timestamp, strlen(timestamp)+1);
-				printf("Child %d writes %s\n", i, timestamp);
+				//printf("Child %d writes %s\n", i, timestamp);
+				fprintf(fPtr, "Child %d writes %s\n", i+1, timestamp);
 
-				printf("Child %d sleeps for %d sec\n\n", i, sleepDuration);
-				sleep(sleepDuration);
-				messageNum++;
+				if(i != 4) {
+					//printf("Child %d sleeps for %d sec\n\n", i, sleepDuration);
+					fprintf(fPtr, "Child %d sleeps for %d sec\n\n", i+1, sleepDuration);
+					sleep(sleepDuration);
+				}
 
 				//select
-				FD_SET(fds[i][READ_END], &read_set);
+				//FD_SET(fds[i][READ_END], &read_set);
 
 				rc = select(FD_SETSIZE, &read_set, NULL, NULL, &timeout);
 				//if (FD_ISSET(fds[i][READ_END], &read_set)) {
@@ -102,11 +160,12 @@ int main()
 					//close(fds[i][WRITE_END]);
 					read(fds[i][READ_END], read_msg, BUFFER_SIZE);
 					//read(&read_set, read_msg, BUFFER_SIZE);
-					printf("Parent: Read '%s' from the pipe.\n", read_msg);
+					//printf("Parent: Read '%s' from the pipe.\n", read_msg);
+					fprintf(fPtr, "Parent: Read '%s' from the pipe.\n", read_msg);
 					//close(READ_END);
 				}
 				else {
-					puts("None read");
+					//puts("None read");
 				}
 
 
@@ -118,6 +177,9 @@ int main()
 			//FD_SET(0, &inputs);  	// set file descriptor 0 (stdin)
 		}
 	}
+	//puts("done");
+
+	fclose(fPtr);
 	return 0;
 }
 
